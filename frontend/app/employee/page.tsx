@@ -1,12 +1,14 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { OrdersTable } from "@/components/employee/OrdersTable";
 import { OrderDetails } from "@/components/employee/OrderDetails";
 import { DeliveryStatus } from "@/components/employee/DeliveryStatus";
 import { CancelOrderDialog } from "@/components/employee/CancelOrderDialog";
 import { DeliveryOrder } from "@/components/employee/types";
-import { API_URL, fetchWithAuth } from "@/utils/auth_fn";
+import { orderService } from "@/utils/icp-api";
+import { isAuthenticated, getCurrentUser } from "@/utils/icp-auth";
 
 interface PageProps {
   params: Promise<{
@@ -15,6 +17,7 @@ interface PageProps {
 }
 
 export default function EmployeePage({ params }: PageProps) {
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
@@ -25,28 +28,48 @@ export default function EmployeePage({ params }: PageProps) {
   const [employeeId, setEmployeeId] = useState<string | null>(null);
   const [resolvedParams, setResolvedParams] = useState<{ id: string } | null>(null);
 
+  // Authentication check
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      router.push('/authentication');
+      return;
+    }
+  }, [router]);
+
   // Resolve params Promise
   useEffect(() => {
     params.then(setResolvedParams);
   }, [params]);
 
   useEffect(() => {
-    async function fetchEmployeeId() {
+    async function fetchEmployeeData() {
       try {
-        const response = await fetchWithAuth(`${API_URL}/employee_id/`);
-        if (!response.ok) {
-          throw new Error("Failed to fetch employee ID");
+        const user = getCurrentUser();
+        if (!user) {
+          throw new Error("No authenticated user found");
         }
-        const data = await response.json();
-        setEmployeeId(data.employee_id);
+        
+        setEmployeeId(user.id?.toString() || "1");
+        
+        // Fetch orders assigned to this employee using ICP service
+        const allOrders = await orderService.getAllOrders();
+        // Filter orders assigned to this employee (mock filtering)
+        const employeeOrders = allOrders.filter((order: any) => 
+          order.assignedEmployeeId === user.id || order.employeeId === user.id
+        );
+        setOrders(employeeOrders);
       } catch (error) {
         setError(
           error instanceof Error ? error.message : "Unknown error occurred"
         );
+      } finally {
+        setLoading(false);
       }
     }
 
-    fetchEmployeeId();
+    if (isAuthenticated()) {
+      fetchEmployeeData();
+    }
     setMounted(true);
   }, []);
 
@@ -57,21 +80,24 @@ export default function EmployeePage({ params }: PageProps) {
       try {
         setLoading(true);
         setError(null);
-        const response = await fetchWithAuth(
-          `${API_URL}/employee_shipments?employeeId=${employeeId}`
+        
+        // Get shipments assigned to this employee using ICP service
+        const allOrders = await orderService.getAllOrders();
+        const employeeOrders = allOrders.filter((order: any) => 
+          order.assignedEmployeeId?.toString() === employeeId || 
+          order.employeeId?.toString() === employeeId
         );
-        const data = await response.json();
 
-        const mappedOrders: DeliveryOrder[] = data.map((shipment: any) => ({
-          orderId: `SHIP-${shipment.shipment_id}`,
-          orderName: `Order-${shipment.order}`,
-          phoneNumber: "N/A",
-          address: "N/A",
-          isDelivered: shipment.status === "delivered",
-          items: [`Order-${shipment.order}`],
-          isCancelled: shipment.status === "cancelled",
+        const mappedOrders: DeliveryOrder[] = employeeOrders.map((order: any) => ({
+          orderId: `ORD-${order.id}`,
+          orderName: `Order-${order.id}`,
+          phoneNumber: order.customerPhone || "N/A",
+          address: order.customerAddress || "N/A",
+          isDelivered: order.status === "delivered",
+          items: order.items || [`Order-${order.id}`],
+          isCancelled: order.status === "cancelled",
           cancellationReason:
-            shipment.status === "cancelled" ? "Unknown" : undefined,
+            order.status === "cancelled" ? order.cancellationReason || "Unknown" : undefined,
         }));
 
         setOrders(mappedOrders);
@@ -113,24 +139,12 @@ export default function EmployeePage({ params }: PageProps) {
 
   const handleUpdateStatus = async (shipmentId: number) => {
     try {
-      const response = await fetchWithAuth(
-        `${API_URL}/update_shipment_status/`,
-        {
-          method: "POST",
-          body: JSON.stringify({
-            shipment_id: shipmentId,
-            status: "delivered",
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Failed to update status: ${response.statusText}`);
-      }
+      // Update order status using ICP service
+      await orderService.updateOrderStatus(shipmentId, "delivered");
 
       setOrders((prevOrders) =>
         prevOrders.map((order) =>
-          order.orderId === `SHIP-${shipmentId}`
+          order.orderId === `ORD-${shipmentId}`
             ? { ...order, isDelivered: true }
             : order
         )

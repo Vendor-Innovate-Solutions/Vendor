@@ -1,42 +1,53 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { ShoppingCart, User } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { PRODUCTS, ORDERS, fetchStockFromAPI, fetchOrdersFromAPI } from '../../../components/retailer/data/mockData';
-import { API_URL } from '../../../utils/auth_fn';
-import { authStorage } from '../../../utils/localStorage';
+import { dashboardService, orderService } from '../../../utils/icp-api';
+import { isAuthenticated, getCurrentUser } from '../../../utils/icp-auth';
+
 const DashboardTab = () => {
+  const router = useRouter();
   const [search, setSearch] = useState('');
   const [totalOrders, setTotalOrders] = useState(0);
   const [totalSpent, setTotalSpent] = useState(0);
+
+  // Authentication check
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      router.push('/authentication');
+      return;
+    }
+  }, [router]);
 
   useEffect(() => {
     const fetchData = async () => {
       await fetchStockFromAPI();
       await fetchOrdersFromAPI();
 
-      // Fetch total orders from count API
+      // Fetch total orders using ICP service
       try {
-        const token = authStorage.getAccessToken();
-        if (!token) throw new Error('Authentication token not found. Please log in again.');
+        const user = getCurrentUser();
+        if (!user) {
+          console.error('No authenticated user found');
+          return;
+        }
 
-        const response = await fetch(`${API_URL}/count/`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
+        // Get order count for the user
+        const orderCount = await dashboardService.getOrderCount(user.id || 1);
+        setTotalOrders(orderCount);
 
-        if (!response.ok) throw new Error(`Count API request failed with status ${response.status}`);
-
-        const data = await response.json();
-        setTotalOrders(data.orders_placed);
+        // Get user's orders to calculate total spent
+        const userOrders = await orderService.getOrdersByRetailer(user.id || 1);
+        const totalSpent = userOrders.reduce((sum: number, order: any) => sum + (order.total || 0), 0);
+        setTotalSpent(totalSpent);
       } catch (error) {
-        console.error('Failed to fetch total orders from API:', error);
+        console.error('Failed to fetch dashboard data:', error);
+        // Fallback to mock data
+        const totalSpent = ORDERS.reduce((sum, order) => sum + order.total, 0);
+        setTotalSpent(totalSpent);
+        setTotalOrders(ORDERS.length);
       }
-
-      // Calculate total spent from ORDERS
-      const totalSpent = ORDERS.reduce((sum, order) => sum + order.total, 0);
-      setTotalSpent(totalSpent);
     };
 
     fetchData();

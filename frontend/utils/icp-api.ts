@@ -310,6 +310,57 @@ export const orderService = {
       console.error('Get orders by product error:', error);
       return [];
     }
+  },
+
+  // Get available employees for order
+  getAvailableEmployees: async (orderId: number) => {
+    try {
+      // Mock implementation - replace with actual ICP call when available
+      return [
+        { id: 1, name: "John Doe", department: "Delivery" },
+        { id: 2, name: "Jane Smith", department: "Warehouse" },
+        { id: 3, name: "Bob Johnson", department: "Delivery" }
+      ];
+    } catch (error) {
+      console.error('Get available employees error:', error);
+      return [];
+    }
+  },
+
+  // Allocate order to employee
+  allocateOrder: async (orderId: number, employeeId: number) => {
+    try {
+      // Mock implementation - replace with actual ICP call when available
+      console.log(`Allocating order ${orderId} to employee ${employeeId}`);
+      return { success: true };
+    } catch (error) {
+      console.error('Allocate order error:', error);
+      throw new Error('Failed to allocate order');
+    }
+  },
+
+  // Get orders by company
+  getOrdersByCompany: async (companyId: number) => {
+    try {
+      // Mock implementation - in real ICP, this would filter orders by company
+      const allOrders = await orderService.getAllOrders();
+      return allOrders.filter((order: any) => order.companyId === companyId);
+    } catch (error) {
+      console.error('Get orders by company error:', error);
+      return [];
+    }
+  },
+
+  // Approve order (create shipment)
+  approveOrder: async (orderId: number) => {
+    try {
+      // Mock implementation - replace with actual ICP call when available
+      console.log(`Approving order ${orderId}`);
+      return { success: true };
+    } catch (error) {
+      console.error('Approve order error:', error);
+      throw new Error('Failed to approve order');
+    }
   }
 };
 
@@ -406,6 +457,76 @@ export const dashboardService = {
     } catch (error) {
       console.error('Get user count error:', error);
       return 0;
+    }
+  },
+
+  // Get overview card data for manufacturer dashboard
+  getOverviewCard: async (companyId: number) => {
+    try {
+      // Mock implementation - replace with actual ICP call when available
+      return {
+        totalOrders: 45,
+        numStores: 12,
+        deliveryAgents: 8,
+        pendingOrders: 15
+      };
+    } catch (error) {
+      console.error('Get overview card error:', error);
+      return {
+        totalOrders: 0,
+        numStores: 0,
+        deliveryAgents: 0,
+        pendingOrders: 0
+      };
+    }
+  }
+};
+
+// Shipment Management
+export const shipmentService = {
+  // Get all shipments
+  getAllShipments: async () => {
+    try {
+      // Mock implementation - replace with actual ICP call when available
+      return [];
+    } catch (error) {
+      console.error('Get shipments error:', error);
+      return [];
+    }
+  },
+
+  // Get shipments by company
+  getShipmentsByCompany: async (companyId: number) => {
+    try {
+      // Mock implementation - replace with actual ICP call when available
+      return [];
+    } catch (error) {
+      console.error('Get shipments by company error:', error);
+      return [];
+    }
+  },
+
+  // Get shipment statistics
+  getShipmentStats: async (companyId: number) => {
+    try {
+      // Mock implementation - replace with actual ICP call when available
+      return {
+        data: [
+          { month: 'January', product: 'Product A', count: 12 },
+          { month: 'January', product: 'Product B', count: 8 },
+          { month: 'February', product: 'Product A', count: 19 },
+          { month: 'February', product: 'Product B', count: 12 },
+          { month: 'March', product: 'Product A', count: 15 },
+          { month: 'March', product: 'Product B', count: 10 },
+          { month: 'April', product: 'Product A', count: 22 },
+          { month: 'April', product: 'Product B', count: 15 },
+          { month: 'May', product: 'Product A', count: 18 },
+          { month: 'May', product: 'Product B', count: 13 }
+        ]
+      };
+    } catch (error) {
+      console.error('Get shipment stats error:', error);
+      return { data: [] };
     }
   }
 };

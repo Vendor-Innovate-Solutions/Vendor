@@ -86,9 +86,24 @@ function CompanyPageContent() {
         
         if (companies.length > 0) {
           // Find company for current user
-          const userCompany = companies.find(company => 
-            company.owner_id === currentUser.principal
-          );
+          const userCompany = companies.find((company: any) => {
+            // Check various possible owner field formats
+            if (company.owner === currentUser.principal || 
+                company.owner_id === currentUser.principal ||
+                company.owner === currentUser.id ||
+                company.ownerId === currentUser.id) {
+              return true;
+            }
+            // Check if user has this company in their companyId array
+            if (currentUser.companyId && Array.isArray(currentUser.companyId)) {
+              return currentUser.companyId.includes(company.id);
+            }
+            // Check if user has this company as single companyId
+            if (currentUser.companyId === company.id) {
+              return true;
+            }
+            return false;
+          });
           
           if (userCompany) {
             setSelectedCompany(userCompany);
@@ -110,12 +125,14 @@ function CompanyPageContent() {
           setIsCreating(true);
           setIsEditing(true);
         }
-      } catch (err) {
+        } catch (err) {
         console.error("Error fetching companies:", err);
         setError("Failed to fetch companies.");
         // Allow creation if fetch fails
         setIsCreating(true);
         setIsEditing(true);
+        setSelectedCompany(null);
+        setFormCompany(initialCompanyState);
       } finally {
         setLoading(false);
       }
@@ -123,7 +140,19 @@ function CompanyPageContent() {
     fetchCompanies();
   }, []);
 
-  // Handle input changes
+  // Debug logging and force creation mode for new users
+  useEffect(() => {
+    const currentUser = getCurrentUser();
+    console.log('Current user:', currentUser);
+    console.log('Current states:', { isCreating, isEditing, selectedCompany });
+    
+    // If user is authenticated but no company is selected, force creation mode
+    if (currentUser && !selectedCompany && !loading) {
+      console.log('Forcing creation mode for user without company');
+      setIsCreating(true);
+      setIsEditing(true);
+    }
+  }, [selectedCompany, loading, isCreating, isEditing]);  // Handle input changes
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormCompany({ ...formCompany, [e.target.name]: e.target.value });
   };
@@ -411,8 +440,17 @@ function CompanyPageContent() {
               </form>
             )}
             {!isCreating && !selectedCompany && (
-              <div className="text-gray-400 text-center py-8">
-                No company found. Please create your company.
+              <div className="text-center py-8">
+                <div className="text-gray-400 mb-4">
+                  No company found. Please create your company.
+                </div>
+                <Button 
+                  type="button" 
+                  className="bg-blue-600 hover:bg-blue-700 px-8 py-2" 
+                  onClick={handleStartCreate}
+                >
+                  Create New Company
+                </Button>
               </div>
             )}
           </CardContent>
