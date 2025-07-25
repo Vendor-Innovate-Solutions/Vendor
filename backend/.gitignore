@@ -1,0 +1,91 @@
+# ICP/Dfinity specific
+.dfx/
+.vessel/
+canister_ids.json
+
+# Motoko compiler output
+.mo-ide/
+.moc-ide/
+
+# Node.js dependencies (if using Node.js tools)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+logs
+*.log
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary folders
+tmp/
+temp/
+
+# Build artifacts
+build/
+dist/
+out/
+
+# Cache directories
+.cache/
+
+# Coverage reports
+coverage/
+*.lcov
+
+# Backup files
+*.bak
+*.backup
+*.orig
+
+# Test outputs
+test-results/
+test-reports/
+
+# Local development files
+*.local
+
+# Deployment artifacts
+deploy/
+deployment/
+
+# Wasm files (if generated)
+*.wasm
+
+# Binary files
+*.bin
+*.exe
+
+# Archive files
+*.tar.gz
+*.zip
+*.rar
