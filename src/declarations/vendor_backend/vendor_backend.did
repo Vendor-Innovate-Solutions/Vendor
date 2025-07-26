@@ -1,0 +1,404 @@
+type User = 
+ record {
+   created_at: int;
+   email: text;
+   groups: vec text;
+   id: principal;
+   is_staff: bool;
+   password_hash: text;
+   username: text;
+ };
+type Truck = 
+ record {
+   capacity: nat;
+   company_id: nat;
+   id: nat;
+   is_available: bool;
+   license_plate: text;
+ };
+type Shipment = 
+ record {
+   employee_id: opt nat;
+   id: nat;
+   order_id: nat;
+   shipment_date: int;
+   status: text;
+ };
+type RetailerProfile = 
+ record {
+   address_line1: text;
+   address_line2: opt text;
+   business_name: text;
+   business_type: opt text;
+   city: text;
+   contact_person: text;
+   country: text;
+   created_at: int;
+   email: text;
+   established_year: opt nat;
+   gstin: opt text;
+   id: nat;
+   is_verified: bool;
+   phone: text;
+   pincode: text;
+   state: text;
+   updated_at: int;
+   user: principal;
+ };
+type Retailer = 
+ record {
+   address_line1: text;
+   address_line2: opt text;
+   city: text;
+   company_id: nat;
+   contact: text;
+   contact_person: opt text;
+   country: text;
+   created_at: int;
+   distance_from_warehouse: float64;
+   email: opt text;
+   gstin: text;
+   id: nat;
+   is_active: bool;
+   name: text;
+   pincode: text;
+   retailer_profile_id: opt nat;
+   state: text;
+   updated_at: int;
+ };
+type Result_9 = 
+ variant {
+   err: text;
+   ok: vec Shipment;
+ };
+type Result_8 = 
+ variant {
+   err: text;
+   ok: vec Truck;
+ };
+type Result_7 = 
+ variant {
+   err: text;
+   ok: User;
+ };
+type Result_6 = 
+ variant {
+   err: text;
+   ok: Category;
+ };
+type Result_5 = 
+ variant {
+   err: text;
+   ok: Company;
+ };
+type Result_4 = 
+ variant {
+   err: text;
+   ok: Order;
+ };
+type Result_3 = 
+ variant {
+   err: text;
+   ok: Product;
+ };
+type Result_24 = 
+ variant {
+   err: text;
+   ok: Retailer;
+ };
+type Result_23 = 
+ variant {
+   err: text;
+   ok: Employee;
+ };
+type Result_22 = 
+ variant {
+   err: text;
+   ok: Invoice;
+ };
+type Result_21 = 
+ variant {
+   err: text;
+   ok: Truck;
+ };
+type Result_20 = 
+ variant {
+   err: text;
+   ok: vec Category;
+ };
+type Result_2 = 
+ variant {
+   err: text;
+   ok: RetailerProfile;
+ };
+type Result_19 = 
+ variant {
+   err: text;
+   ok: vec Company;
+ };
+type Result_18 = 
+ variant {
+   err: text;
+   ok: vec CompanyRetailerConnection;
+ };
+type Result_17 = 
+ variant {
+   err: text;
+   ok:
+    record {
+      employees_available: nat;
+      orders_placed: nat;
+      pending_orders: nat;
+      retailers_available: nat;
+    };
+ };
+type Result_16 = 
+ variant {
+   err: text;
+   ok: vec Employee;
+ };
+type Result_15 = 
+ variant {
+   err: text;
+   ok: nat;
+ };
+type Result_14 = 
+ variant {
+   err: text;
+   ok: vec Invoice;
+ };
+type Result_13 = 
+ variant {
+   err: text;
+   ok: vec Order;
+ };
+type Result_12 = 
+ variant {
+   err: text;
+   ok: vec Product;
+ };
+type Result_11 = 
+ variant {
+   err: text;
+   ok:
+    record {
+      connected_companies: nat;
+      pending_requests: nat;
+      total_orders: nat;
+    };
+ };
+type Result_10 = 
+ variant {
+   err: text;
+   ok: vec Retailer;
+ };
+type Result_1 = 
+ variant {
+   err: text;
+   ok: Shipment;
+ };
+type Result = 
+ variant {
+   err: text;
+   ok: text;
+ };
+type Product = 
+ record {
+   available_quantity: nat;
+   category_id: opt nat;
+   cess_rate: float64;
+   cgst_rate: float64;
+   company_id: nat;
+   created_by: opt principal;
+   hsn_code: text;
+   id: nat;
+   igst_rate: float64;
+   name: text;
+   price: float64;
+   sgst_rate: float64;
+   status: text;
+   total_required_quantity: nat;
+   total_shipped: nat;
+   uqc: text;
+ };
+type OrderItem = 
+ record {
+   id: nat;
+   order_id: nat;
+   product_id: nat;
+   quantity: nat;
+ };
+type Order = 
+ record {
+   id: nat;
+   items: vec OrderItem;
+   order_date: int;
+   retailer_id: nat;
+   status: text;
+ };
+type InvoiceItem = 
+ record {
+   cgst: float64;
+   gst_rate: float64;
+   hsn_code: text;
+   id: nat;
+   igst: float64;
+   invoice_id: nat;
+   price: float64;
+   product_id: nat;
+   quantity: nat;
+   sgst: float64;
+   taxable_value: float64;
+ };
+type Invoice = 
+ record {
+   company_id: nat;
+   due_date: opt int;
+   grand_total: float64;
+   id: nat;
+   invoice_date: int;
+   invoice_number: text;
+   irn: text;
+   is_einvoice_generated: bool;
+   items: vec InvoiceItem;
+   payment_mode: text;
+   payment_status: text;
+   retailer_id: nat;
+   total_cgst: float64;
+   total_igst: float64;
+   total_sgst: float64;
+   total_taxable_value: float64;
+ };
+type Employee = 
+ record {
+   company_id: nat;
+   contact: text;
+   id: nat;
+   retailer_id: opt nat;
+   truck_id: opt nat;
+   user: principal;
+ };
+type CompanyRetailerConnection = 
+ record {
+   approved_at: opt int;
+   approved_by: opt principal;
+   company_id: nat;
+   connected_at: int;
+   credit_limit: float64;
+   id: nat;
+   payment_terms: text;
+   retailer_id: nat;
+   status: text;
+ };
+type Company = 
+ record {
+   address: text;
+   city: text;
+   created_at: int;
+   description: opt text;
+   email: opt text;
+   gstin: text;
+   id: nat;
+   is_public: bool;
+   name: text;
+   owner: principal;
+   phone: opt text;
+   pincode: text;
+   state: text;
+ };
+type Category = 
+ record {
+   company_id: nat;
+   id: nat;
+   name: text;
+ };
+service : {
+  acceptRetailerRequest: (request_id: nat, action: text, credit_limit:
+   float64, payment_terms: text) -> (Result);
+  addRetailer: (company_id: nat, name: text, contact_person: opt text, email:
+   opt text, contact: text, address_line1: text, address_line2: opt text,
+   city: text, state: text, pincode: text, country: text, gstin: text,
+   distance_from_warehouse: float64) -> (Result_24);
+  allocateOrder: (order_id: nat, employee_id: nat) -> (Result);
+  approveOrder: (order_id: nat) -> (Result_1);
+  createCategory: (company_id: nat, name: text) -> (Result_6);
+  createCompany: (name: text, gstin: text, address: text, state: text, city:
+   text, pincode: text, phone: opt text, email: opt text, is_public: 
+   bool, description: opt text) -> (Result_5);
+  createEmployee: (company_id: nat, retailer_id: opt nat, contact: text,
+   truck_id: opt nat) -> (Result_23);
+  createInvoice: (invoice_number: text, company_id: nat, retailer_id: 
+   nat, invoice_date: int, due_date: opt int, payment_mode: text, items:
+   vec record {
+         nat;
+         nat;
+         float64;
+         float64;
+         float64;
+         float64;
+         float64;
+         float64;
+         text;
+       }) -> (Result_22);
+  createOrder: (retailer_id: nat, items: vec record {
+                                               nat;
+                                               nat;
+                                             }) -> (Result_4);
+  createProduct: (company_id: nat, name: text, category_id: opt nat,
+   available_quantity: nat, uqc: text, price: float64, hsn_code: text,
+   cgst_rate: float64, sgst_rate: float64, igst_rate: float64, cess_rate:
+   float64) -> (Result_3);
+  createRetailerProfile: (business_name: text, contact_person: text, phone:
+   text, email: text, address_line1: text, address_line2: opt text, city:
+   text, state: text, pincode: text, country: text, gstin: opt text,
+   business_type: opt text, established_year: opt nat) -> (Result_2);
+  createTruck: (company_id: nat, license_plate: text, capacity: nat) ->
+   (Result_21);
+  deleteCategory: (id: nat) -> (Result);
+  deleteCompany: (id: nat) -> (Result);
+  deleteProduct: (id: nat) -> (Result);
+  forgotPassword: (username: text, email: text) -> (Result);
+  getCategories: (company_id: opt nat) -> (Result_20);
+  getCategoryStockData: () -> (vec record {
+                                     name: text;
+                                     value: nat;
+                                   });
+  getCompanies: () -> (Result_19);
+  getCompanyConnections: (company_id: nat, status: text) -> (Result_18);
+  getCounts: (company_id: nat) -> (Result_17);
+  getEmployeeShipments: () -> (Result_9);
+  getEmployees: (company_id: opt nat) -> (Result_16);
+  getInvoiceCount: (company_id: nat) -> (Result_15);
+  getInvoices: (company_id: opt nat) -> (Result_14);
+  getLoggedInUser: () -> (Result_7);
+  getOrders: (status: opt text) -> (Result_13);
+  getOrdersByRetailer: (retailer_id: nat) -> (Result_13);
+  getProducts: (company_id: opt nat) -> (Result_12);
+  getPublicCompanies: () -> (vec Company);
+  getRetailerCounts: () -> (Result_11);
+  getRetailerProfile: () -> (Result_2);
+  getRetailers: (company_id: opt nat) -> (Result_10);
+  getShipments: () -> (Result_9);
+  getTrucks: (company_id: opt nat) -> (Result_8);
+  health: () -> (text);
+  login: (username: text, password: text) -> (Result);
+  logout: () -> (Result);
+  register: (username: text, email: text, password: text, groups:
+   vec text) -> (Result_7);
+  requestCompanyApproval: (company_id: nat, message: text) -> (Result);
+  resetPassword: (username: text, new_password: text, otp: text) -> (Result);
+  storeQRCode: (qr_text: text) -> (Result);
+  updateCategory: (id: nat, name: text) -> (Result_6);
+  updateCompany: (id: nat, name: text, gstin: text, address: text, state:
+   text, city: text, pincode: text, phone: opt text, email: opt text,
+   is_public: bool, description: opt text) -> (Result_5);
+  updateOrderStatus: (order_id: nat, status: text) -> (Result_4);
+  updateProductQuantity: (id: nat, available_quantity: nat, total_shipped:
+   nat, total_required_quantity: nat) -> (Result_3);
+  updateRetailerProfile: (business_name: text, contact_person: text, phone:
+   text, email: text, address_line1: text, address_line2: opt text, city:
+   text, state: text, pincode: text, country: text, gstin: opt text,
+   business_type: opt text, established_year: opt nat) -> (Result_2);
+  updateShipmentStatus: (shipment_id: nat, status: text) -> (Result_1);
+  verifyOTP: (username: text, otp: text) -> (Result);
+}

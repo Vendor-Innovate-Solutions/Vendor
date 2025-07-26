@@ -1,9 +1,11 @@
-// filepath: c:\Users\91902\OneDrive - Amrita Vishwa Vidyapeetham\Documents\sony\SmartChainERP\frontend\app\manufacturer\profile\page.tsx
 "use client";
-import { API_URL } from '@/utils/auth_fn';
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { userService } from '@/utils/icp-api';
+import { isAuthenticated, getCurrentUser } from '@/utils/icp-auth';
 
 const ProfileTab = () => {
+  const router = useRouter();
   const [userDetails, setUserDetails] = useState({
     username: '',
     email: '',
@@ -11,29 +13,58 @@ const ProfileTab = () => {
     groups: [],
   });
 
+  // Authentication check
+  useEffect(() => {
+    if (!isAuthenticated()) {
+      router.push('/authentication');
+      return;
+    }
+  }, [router]);
+
   useEffect(() => {
     const fetchUserDetails = async () => {
       try {
-        const token = localStorage.getItem('access_token');
-        if (!token) throw new Error('Authentication token not found. Please log in again.');
+        const currentUser = getCurrentUser();
+        if (!currentUser) {
+          throw new Error('No authenticated user found. Please log in again.');
+        }
 
-        const response = await fetch(`${API_URL}/user_detail/`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (!response.ok) throw new Error(`User details API request failed with status ${response.status}`);
-
-        const data = await response.json();
-        setUserDetails(data);
+        // Get user details using ICP service
+        const userData = await userService.getUserById(currentUser.id || 1);
+        if (userData) {
+          setUserDetails({
+            username: userData.username || currentUser.username || '',
+            email: userData.email || currentUser.email || '',
+            is_staff: userData.userType?.admin !== undefined || false,
+            groups: userData.groups || [],
+          });
+        } else {
+          // Fallback to current user data
+          setUserDetails({
+            username: currentUser.username || '',
+            email: currentUser.email || '',
+            is_staff: currentUser.userType?.admin !== undefined || false,
+            groups: [],
+          });
+        }
       } catch (error) {
-        console.error('Failed to fetch user details from API:', error);
+        console.error('Failed to fetch user details:', error);
+        // Fallback to current user data if API fails
+        const currentUser = getCurrentUser();
+        if (currentUser) {
+          setUserDetails({
+            username: currentUser.username || '',
+            email: currentUser.email || '',
+            is_staff: currentUser.userType?.admin !== undefined || false,
+            groups: [],
+          });
+        }
       }
     };
 
-    fetchUserDetails();
+    if (isAuthenticated()) {
+      fetchUserDetails();
+    }
   }, []);
 
   return (

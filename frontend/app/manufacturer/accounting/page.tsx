@@ -4,7 +4,8 @@ import React, { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { FileText, UserPlus, FileInput, Building2, Settings, CreditCard } from "lucide-react";
 import Link from 'next/link';
-import { API_URL ,fetchWithAuth} from "@/utils/auth_fn";
+import { accountingService } from "@/utils/icp-api";
+import { getCurrentUser } from "@/utils/icp-auth";
 
 export default function AccountingDashboard() {
   const [stats, setStats] = useState({
@@ -15,38 +16,43 @@ export default function AccountingDashboard() {
 
   useEffect(() => {
   const fetchStats = async () => {
-    const companyId = localStorage.getItem('company_id');
-    if (!companyId) return;
+    try {
+      // Get current user to verify authentication
+      const currentUser = getCurrentUser();
+      if (!currentUser) {
+        console.log('No authenticated user found');
+        return;
+      }
 
-    // Fetch total invoices count
-    const countRes = await fetchWithAuth(`${API_URL}/invoices/count/?company=${companyId}`);
-    const countData = await countRes.json();
+      const companyId = localStorage.getItem('company_id');
+      if (!companyId) {
+        console.log('No company ID found');
+        return;
+      }
 
-    // Fetch all invoices for the company
-    const invoicesRes = await fetchWithAuth(`${API_URL}/invoices/?company=${companyId}`);
-    const invoicesData = await invoicesRes.json();
+      // Fetch invoice count using ICP service
+      const countResult = await accountingService.getInvoiceCount(parseInt(companyId));
+      
+      // Fetch all invoices for the company using ICP service
+      const invoices = await accountingService.getInvoicesByCompany(parseInt(companyId));
 
-    // Support both paginated and plain array responses
-    const invoices = Array.isArray(invoicesData)
-      ? invoicesData
-      : Array.isArray(invoicesData.results)
-        ? invoicesData.results
-        : [];
+      // Calculate pending payments and total revenue
+      let pendingPayments = invoices.filter(
+        (inv: any) => inv.status && inv.status.toLowerCase() === 'pending'
+      ).length;
 
-    // Calculate pending payments and total revenue
-    let pendingPayments = invoices.filter(
-      (inv: any) => inv.payment_status && inv.payment_status.toLowerCase() === 'unpaid'
-    ).length;
+      let totalRevenue = invoices.reduce(
+        (sum: number, inv: any) => sum + (parseFloat(inv.amount) || 0), 0
+      );
 
-    let totalRevenue = invoices.reduce(
-      (sum: number, inv: any) => sum + (parseFloat(inv.grand_total) || 0), 0
-    );
-
-    setStats({
-      totalInvoices: countData.count || invoices.length,
-      pendingPayments,
-      totalRevenue,
-    });
+      setStats({
+        totalInvoices: countResult.count || invoices.length,
+        pendingPayments,
+        totalRevenue,
+      });
+    } catch (error) {
+      console.error('Error fetching accounting stats:', error);
+    }
   };
 
   fetchStats();

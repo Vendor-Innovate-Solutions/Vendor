@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { fetchWithAuth, getAuthToken, API_URL } from "@/utils/auth_fn";
+import { companyService, productService, accountingService, invoiceService } from "@/utils/icp-api";
+import { getCurrentUser } from "@/utils/icp-auth";
 import { useRouter } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -56,56 +57,57 @@ export default function CreateBill() {
 
   useEffect(() => {
     const fetchData = async () => {
-      const companyId = localStorage.getItem("company_id");
-      if (!companyId) return;
+      try {
+        // Check authentication
+        const currentUser = getCurrentUser();
+        if (!currentUser) {
+          console.log('No authenticated user found');
+          return;
+        }
 
-      // Fetch company details for preview
-      const companyRes = await fetchWithAuth(
-        `${API_URL}/company/${companyId}/`
-      );
-      if (companyRes.ok) {
-        const companyObj = await companyRes.json();
-        setCompanyObj(companyObj);
-      }
+        const companyId = localStorage.getItem("company_id");
+        if (!companyId) return;
 
-      // Retailers for this company
-      const retailerRes = await fetchWithAuth(
-        `${API_URL}/retailers/?company=${companyId}`
-      );
-      if (retailerRes.ok) {
-        const retailerData = await retailerRes.json();
-        setRetailers(
-          Array.isArray(retailerData)
-            ? retailerData
-            : retailerData.results || []
-        );
-      }
+        // Fetch company details using ICP service
+        const companyData = await companyService.getCompanyById(parseInt(companyId));
+        if (companyData) {
+          setCompanyObj(companyData);
+        }
 
-      // Products for this company
-      const productRes = await fetchWithAuth(
-        `${API_URL}/products/?company=${companyId}`
-      );
-      if (productRes.ok) {
-        const productData = await productRes.json();
-        setProducts(
-          Array.isArray(productData) ? productData : productData.results || []
-        );
-      }
+        // Fetch retailers for this company using ICP service
+        const retailerData = await accountingService.getRetailersByCompany(parseInt(companyId));
+        // Transform retailer data to expected format
+        const transformedRetailers = retailerData.map((retailer: any) => ({
+          retailer_id: retailer.id,
+          name: retailer.name,
+          address: retailer.address,
+          address_line1: retailer.address,
+          address_line2: '',
+          city: retailer.city || '',
+          state: retailer.state || '',
+          country: retailer.country || 'India',
+          pincode: retailer.pincode || '',
+          gstin: retailer.gstin || '',
+          email: retailer.email,
+          contact: retailer.phone,
+        }));
+        setRetailers(transformedRetailers);
 
-      // Invoice count
-      const invoiceRes = await fetchWithAuth(
-        `${API_URL}/invoices/count/?company=${companyId}`
-      );
-      let count = 0;
-      if (invoiceRes.ok) {
-        const invoiceData = await invoiceRes.json();
-        count = invoiceData?.count || 0;
+        // Fetch products for this company using ICP service
+        const productData = await productService.getProductsByCompany(parseInt(companyId));
+        setProducts(productData);
+
+        // Fetch invoice count using ICP service
+        const countResult = await accountingService.getInvoiceCount(parseInt(companyId));
+        const count = countResult.count || 0;
+        setInvoiceCount(count);
+        setFormData((prev) => ({
+          ...prev,
+          invoice_number: `INV-${count + 1}`,
+        }));
+      } catch (error) {
+        console.error('Error fetching data:', error);
       }
-      setInvoiceCount(count);
-      setFormData((prev) => ({
-        ...prev,
-        invoice_number: `INV-${count + 1}`,
-      }));
     };
 
     fetchData();
@@ -207,11 +209,14 @@ export default function CreateBill() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setNotification(null);
-    let token = getAuthToken();
-    if (!token) {
+    
+    // Check authentication using ICP
+    const currentUser = getCurrentUser();
+    if (!currentUser) {
       setNotification("Not authenticated");
       return;
     }
+    
     const companyId = localStorage.getItem("company_id");
     if (!companyId) {
       setNotification("No company selected");
@@ -276,31 +281,16 @@ export default function CreateBill() {
     };
 
     try {
-      const res = await fetchWithAuth(`${API_URL}/invoices/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(payload),
-      });
-      if (res.ok) {
+      // Create invoice using ICP service
+      const result = await invoiceService.createInvoice(payload);
+      
+      if (result.success) {
         setNotification("Bill created successfully");
-        let token = getAuthToken();
         const companyId = localStorage.getItem("company_id");
-        if (token && companyId) {
+        if (companyId) {
           // Fetch new count and update invoice number
-          const invoiceData = await fetch(
-            `${API_URL}/invoices/?company=${companyId}`,
-            {
-              headers: { Authorization: `Bearer ${token}` },
-            }
-          );
-          let count = 0;
-          if (invoiceData.ok) {
-            const data = await invoiceData.json();
-            count = data.count || 0;
-          }
+          const countResult = await accountingService.getInvoiceCount(parseInt(companyId));
+          const count = countResult.count || 0;
           setInvoiceCount(count);
           setFormData((prev) => ({
             ...prev,
@@ -311,9 +301,10 @@ export default function CreateBill() {
           router.push("/manufacturer/accounting/vendorBills");
         }, 2000);
       } else {
-        setNotification("Failed to create bill");
+        setNotification(result.error || "Failed to create bill");
       }
-    } catch {
+    } catch (error) {
+      console.error('Error creating invoice:', error);
       setNotification("Failed to create bill");
     }
   };

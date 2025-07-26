@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { fetchWithAuth ,API_URL} from "@/utils/auth_fn";
+import { accountingService } from "@/utils/icp-api";
+import { getCurrentUser } from "@/utils/icp-auth";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -61,27 +62,51 @@ export default function RetailerPage() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const companyId = localStorage.getItem("company_id");
-      if (!companyId) {
-        setError("No company selected.");
-        setLoading(false);
-        return;
-      }
-      // No need to fetch companies anymore
-      const retailerRes = await fetchWithAuth(`${API_URL}/retailers/?company=${companyId}`);
-        if (retailerRes.ok) {
-          const retailerData = await retailerRes.json();
-          const retailerList = Array.isArray(retailerData)
-    ? retailerData
-    : retailerData.results || [];
-  setRetailers(retailerList);
-  if (retailerList.length > 0) {
-    setSelectedRetailer(retailerList[0]);
-    setForm(retailerList[0]);
-          }
+        // Get current user to verify authentication
+        const currentUser = getCurrentUser();
+        if (!currentUser) {
+          setError("Please log in to access this page.");
+          setLoading(false);
+          return;
         }
-      } catch {
-        setError("Failed to fetch companies or retailers.");
+
+        const companyId = localStorage.getItem("company_id");
+        if (!companyId) {
+          setError("No company selected.");
+          setLoading(false);
+          return;
+        }
+
+        // Fetch retailers using ICP service
+        const retailerData = await accountingService.getRetailersByCompany(parseInt(companyId));
+        
+        // Transform the data to match RetailerForm format
+        const retailerList = retailerData.map((retailer: any) => ({
+          retailer_id: retailer.id,
+          name: retailer.name,
+          contact_person: retailer.contact_person || '',
+          email: retailer.email,
+          contact: retailer.phone || retailer.contact || '',
+          address_line1: retailer.address || '',
+          address_line2: '',
+          city: retailer.city || '',
+          state: retailer.state || '',
+          pincode: retailer.pincode || '',
+          country: retailer.country || 'India',
+          gstin: retailer.gstin || '',
+          distance_from_warehouse: retailer.distance || '0',
+          is_active: retailer.is_active !== false,
+        }));
+        
+        setRetailers(retailerList);
+        
+        if (retailerList.length > 0) {
+          setSelectedRetailer(retailerList[0]);
+          setForm(retailerList[0]);
+        }
+      } catch (error) {
+        console.error('Error fetching retailers:', error);
+        setError("Failed to fetch retailers.");
       } finally {
         setLoading(false);
       }
@@ -126,26 +151,59 @@ export default function RetailerPage() {
     setMessage("");
     try {
       const companyId = localStorage.getItem("company_id");
-      const res = await fetchWithAuth(`${API_URL}/retailers/add/?company=${companyId}`, {
-        method: "POST",
-        body: JSON.stringify({
-          ...form,
-          distance_from_warehouse: Number(form.distance_from_warehouse),
-        }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setRetailers((prev) => [...prev, data]);
-        setSelectedRetailer(data);
-        setForm(data);
+      if (!companyId) {
+        setError("No company selected.");
+        return;
+      }
+
+      // Transform form data to match the service format
+      const retailerData = {
+        name: form.name,
+        contact_person: form.contact_person,
+        email: form.email,
+        phone: form.contact,
+        address: form.address_line1,
+        city: form.city,
+        state: form.state,
+        pincode: form.pincode,
+        country: form.country,
+        gstin: form.gstin,
+        distance: Number(form.distance_from_warehouse),
+        is_active: form.is_active,
+      };
+
+      const result = await accountingService.addRetailer(parseInt(companyId), retailerData);
+      
+      if (result.success) {
+        // Transform the returned data to RetailerForm format
+        const newRetailer = {
+          retailer_id: result.data.id,
+          name: result.data.name,
+          contact_person: result.data.contact_person || '',
+          email: result.data.email,
+          contact: result.data.phone || '',
+          address_line1: result.data.address || '',
+          address_line2: '',
+          city: result.data.city || '',
+          state: result.data.state || '',
+          pincode: result.data.pincode || '',
+          country: result.data.country || 'India',
+          gstin: result.data.gstin || '',
+          distance_from_warehouse: result.data.distance?.toString() || '0',
+          is_active: result.data.is_active !== false,
+        };
+
+        setRetailers((prev) => [...prev, newRetailer]);
+        setSelectedRetailer(newRetailer);
+        setForm(newRetailer);
         setMessage("Retailer added successfully!");
         setIsEditing(false);
         setIsCreating(false);
       } else {
-        const data = await res.json();
-        setError(data.detail || "Failed to add retailer.");
+        setError(result.error || "Failed to add retailer.");
       }
-    } catch {
+    } catch (error) {
+      console.error('Error creating retailer:', error);
       setError("Failed to add retailer.");
     }
   };
@@ -156,29 +214,58 @@ export default function RetailerPage() {
     setError("");
     setMessage("");
     if (!form.retailer_id) return;
+    
     try {
-      const res = await fetchWithAuth(`${API_URL}/retailers/${form.retailer_id}/`, {
-        method: "PUT",
-        body: JSON.stringify({
-          ...form,
-          distance_from_warehouse: Number(form.distance_from_warehouse),
-        }),
-      });
-      if (res.ok) {
-        const data = await res.json();
+      // Transform form data to match the service format
+      const retailerData = {
+        name: form.name,
+        contact_person: form.contact_person,
+        email: form.email,
+        phone: form.contact,
+        address: form.address_line1,
+        city: form.city,
+        state: form.state,
+        pincode: form.pincode,
+        country: form.country,
+        gstin: form.gstin,
+        distance: Number(form.distance_from_warehouse),
+        is_active: form.is_active,
+      };
+
+      const result = await accountingService.updateRetailer(form.retailer_id, retailerData);
+      
+      if (result.success) {
+        // Transform the returned data to RetailerForm format
+        const updatedRetailer = {
+          retailer_id: result.data.id,
+          name: result.data.name,
+          contact_person: result.data.contact_person || '',
+          email: result.data.email,
+          contact: result.data.phone || '',
+          address_line1: result.data.address || '',
+          address_line2: '',
+          city: result.data.city || '',
+          state: result.data.state || '',
+          pincode: result.data.pincode || '',
+          country: result.data.country || 'India',
+          gstin: result.data.gstin || '',
+          distance_from_warehouse: result.data.distance?.toString() || '0',
+          is_active: result.data.is_active !== false,
+        };
+
         setRetailers((prev) =>
-          prev.map((r) => (r.retailer_id === data.id ? data : r))
+          prev.map((r) => (r.retailer_id === updatedRetailer.retailer_id ? updatedRetailer : r))
         );
-        setSelectedRetailer(data);
-        setForm(data);
+        setSelectedRetailer(updatedRetailer);
+        setForm(updatedRetailer);
         setMessage("Retailer details updated!");
         setIsEditing(false);
         setIsCreating(false);
       } else {
-        const data = await res.json();
-        setError(data.detail || "Failed to update retailer.");
+        setError(result.error || "Failed to update retailer.");
       }
-    } catch {
+    } catch (error) {
+      console.error('Error updating retailer:', error);
       setError("Failed to update retailer.");
     }
   };

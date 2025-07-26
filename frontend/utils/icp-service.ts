@@ -1,17 +1,18 @@
 import { Actor, HttpAgent } from '@dfinity/agent';
 import { Principal } from '@dfinity/principal';
-import { getCurrentConfig, isDevelopment } from './icp-config';
+import { getCurrentConfig, isDevelopment, getBackendCanisterId, getHostUrl } from './icp-config';
 import mockActor from './icp-mock';
 
 // Get current configuration
-const config = getCurrentConfig();
-const CANISTER_ID = config.CANISTER_ID;
-const HOST = config.HOST;
+const CANISTER_ID = getBackendCanisterId();
+const HOST = getHostUrl();
 
 // For development, use mock actor
 if (isDevelopment()) {
   console.log('🟡 Using Mock ICP Service for Development');
-  console.log('💡 To use real ICP canister, deploy your backend and update icp-config.ts');
+  console.log('💡 To use real ICP canister, deploy your backend and update environment variables');
+  console.log(`🔧 Canister ID: ${CANISTER_ID}`);
+  console.log(`🔧 Host: ${HOST}`);
 }
 
 // IDL factory for the backend canister

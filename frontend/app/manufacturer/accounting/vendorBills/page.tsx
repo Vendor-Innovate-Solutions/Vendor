@@ -1,8 +1,8 @@
 "use client"
 
 import React, { useState, useEffect, useRef } from "react"
-import { fetchWithAuth, API_URL } from "@/utils/auth_fn"
-import { authStorage } from "@/utils/localStorage"
+import { accountingService } from "@/utils/icp-api"
+import { getCurrentUser } from "@/utils/icp-auth"
 import { useRouter } from "next/navigation"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { FileText } from "lucide-react"
@@ -163,20 +163,50 @@ export default function VendorBills() {
   useEffect(() => {
     const fetchBills = async () => {
       try {
-        const token = authStorage.getAccessToken()
-        const companyId = authStorage.getCompanyId()
-        if (!token || !companyId) {
-          console.warn("Missing token or company ID")
+        // Get current user to verify authentication
+        const currentUser = getCurrentUser()
+        if (!currentUser) {
+          console.warn("No authenticated user found")
           return
         }
 
-        const res = await fetchWithAuth(`${API_URL}/invoices/?company=${companyId}`)
-        if (res.ok) {
-          const data = await res.json()
-          setBills(Array.isArray(data) ? data : data.results || [])
-        } else {
-          console.error("Failed to fetch bills: HTTP error", res.status)
+        const companyId = localStorage.getItem('company_id')
+        if (!companyId) {
+          console.warn("Missing company ID")
+          return
         }
+
+        // Fetch invoices using ICP service
+        const invoicesData = await accountingService.getInvoicesByCompany(parseInt(companyId))
+        
+        // Transform the data to match Bill format
+        const transformedBills = invoicesData.map((invoice: any) => ({
+          invoice_number: invoice.invoiceNumber,
+          retailer_name: invoice.customerName,
+          Retailer: invoice.customerName,
+          invoice_date: invoice.date,
+          payment_status: invoice.status,
+          grand_total: invoice.amount,
+          payment_mode: 'Card', // Default value since not provided
+          items: [], // Empty items for now
+          company: {
+            name: 'Your Company', // Default company info
+            address: 'Company Address',
+            city: 'City',
+            state: 'State',
+            country: 'Country',
+            pincode: '000000',
+            gstin: 'GSTIN123456',
+            email: 'company@example.com',
+            phone: '+1234567890'
+          },
+          total_taxable_value: invoice.amount * 0.9, // Mock calculation
+          total_cgst: invoice.amount * 0.05,
+          total_sgst: invoice.amount * 0.05,
+          total_igst: 0,
+        }))
+        
+        setBills(transformedBills)
       } catch (error) {
         console.error("Failed to fetch bills:", error)
       }

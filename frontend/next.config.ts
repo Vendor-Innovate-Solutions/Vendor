@@ -1,7 +1,6 @@
 import type { NextConfig } from "next";
 
-/** @type {import('next').NextConfig} */
-const nextConfig = {
+const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
@@ -11,21 +10,20 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  output: 'standalone',
+  output: 'export',
+  trailingSlash: true,
+  skipTrailingSlashRedirect: true,
+  distDir: 'out',
+  assetPrefix: process.env.NODE_ENV === 'production' ? './' : '',
+  async redirects() {
+    return [
+      {
+        source: '/',
+        destination: '/authentication',
+        permanent: false,
+      },
+    ];
+  },
 };
 
-module.exports = nextConfig;
-
-module.exports = {
-    async redirects() {
-      return [
-        {
-          source: '/',
-          destination: '/authentication',
-          permanent: true,
-        },
-      ];
-    },
-  };
-  
 export default nextConfig;

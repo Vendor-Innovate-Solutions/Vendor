@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { API_URL, refreshAccessToken, getAuthToken } from '@/utils/auth_fn';
+import { companyService, productService, categoryService, stockService } from '@/utils/icp-api';
+import { getCurrentUser } from '@/utils/icp-auth';
 import { useStockData } from '@/components/manufacturer/stockcount/data';
 import SidePanel from '@/components/manufacturer/stockcount/SidePanel';
 import NavigationBar from '@/components/manufacturer/stockcount/NavigationBar';
@@ -95,23 +96,34 @@ export default function StockCountPage() {
 
   // Fetch categories and companies for dropdowns
   useEffect(() => {
-  const token = localStorage.getItem("access_token");
-  if (!token) return;
-  fetch(`${API_URL}/categories/`, {
-    headers: { Authorization: `Bearer ${token}` }
-  })
-    .then(res => res.json())
-    .then(data => {
-      // If paginated, use data.results, else use data
-      setCategories(Array.isArray(data) ? data : (data.results || []));
-    })
-    .catch(() => setCategories([]));
-  fetch(`${API_URL}/company/`, {
-    headers: { Authorization: `Bearer ${token}` }
-  })
-    .then(res => res.json())
-    .then(data => setCompanies(Array.isArray(data) ? data : (data.results || [])))
-    .catch(() => setCompanies([]));
+  const fetchInitialData = async () => {
+    try {
+      // Check authentication
+      const currentUser = getCurrentUser();
+      if (!currentUser) {
+        console.log('No authenticated user found');
+        return;
+      }
+
+      // Fetch categories using ICP service
+      const categoriesData = await categoryService.getAllCategories();
+      const transformedCategories = categoriesData.map((cat: any) => ({
+        category_id: cat.id,
+        name: cat.name
+      }));
+      setCategories(transformedCategories);
+
+      // Fetch companies using ICP service
+      const companiesData = await companyService.getAllCompanies();
+      setCompanies(companiesData);
+    } catch (error) {
+      console.error('Error fetching initial data:', error);
+      setCategories([]);
+      setCompanies([]);
+    }
+  };
+
+  fetchInitialData();
 }, []);
 
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -122,96 +134,42 @@ export default function StockCountPage() {
     e.preventDefault();
     setSubmitError("");
     setSubmitSuccess("");
-    let token = await getAuthToken();
-    if (!token) {
+    
+    // Check authentication
+    const currentUser = getCurrentUser();
+    if (!currentUser) {
       setSubmitError("Not authenticated");
       return;
     }
+    
     const companyId = localStorage.getItem("company_id");
     if (!companyId) {
       setSubmitError("No company selected");
       return;
     }
+    
     try {
-      const res = await fetch(`${API_URL}/products/`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          name: form.name,
-          company: Number(companyId), // always from localStorage
-          category: form.category ? Number(form.category) : null,
-          available_quantity: Number(form.available_quantity),
-          unit: form.unit,
-          total_shipped: Number(form.total_shipped),
-          total_required_quantity: Number(form.total_required_quantity),
-          price: Number(form.price),
-          hsn_code: form.hsn_code,
-          cgst_rate: Number(form.cgst_rate),
-          sgst_rate: Number(form.sgst_rate),
-          igst_rate: Number(form.igst_rate),
-          cess_rate: Number(form.cess_rate),
-          status: form.status,
-        }),
-      });
-      // If unauthorized, try to refresh and retry once
-      if (res.status === 401) {
-        token = await refreshAccessToken();
-        if (!token) {
-          setSubmitError("Session expired. Please log in again.");
-          return;
-        }
-        const retryRes = await fetch(`${API_URL}/products/`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            name: form.name,
-            company: Number(companyId),
-            category: form.category ? Number(form.category) : null,
-            available_quantity: Number(form.available_quantity),
-            unit: form.unit,
-            total_shipped: Number(form.total_shipped),
-            total_required_quantity: Number(form.total_required_quantity),
-            price: Number(form.price),
-            hsn_code: form.hsn_code,
-            cgst_rate: Number(form.cgst_rate),
-            sgst_rate: Number(form.sgst_rate),
-            igst_rate: Number(form.igst_rate),
-            cess_rate: Number(form.cess_rate),
-            status: form.status,
-          }),
-        });
-        if (retryRes.ok) {
-          setSubmitSuccess("Product added successfully!");
-          setForm({
-            name: "",
-            category: "",
-            available_quantity: "",
-            price: "",
-            company: "",
-            unit: "",
-            total_shipped: "",
-            total_required_quantity: "",
-            hsn_code: "",
-            cgst_rate: "0",
-            sgst_rate: "0",
-            igst_rate: "0",
-            cess_rate: "0",
-            status: "sufficient",
-          });
-          setShowModal(false);
-        } else {
-          const data = await retryRes.json();
-          setSubmitError(data.error || "Failed to add product.");
-        }
-        return;
-      }
-      if (res.ok) {
+      // Create product with detailed stock information using ICP service
+      const productData = {
+        name: form.name,
+        company: Number(companyId),
+        category: form.category ? Number(form.category) : null,
+        available_quantity: Number(form.available_quantity),
+        unit: form.unit,
+        total_shipped: Number(form.total_shipped),
+        total_required_quantity: Number(form.total_required_quantity),
+        price: Number(form.price),
+        hsn_code: form.hsn_code,
+        cgst_rate: Number(form.cgst_rate),
+        sgst_rate: Number(form.sgst_rate),
+        igst_rate: Number(form.igst_rate),
+        cess_rate: Number(form.cess_rate),
+        status: form.status,
+      };
+
+      const result = await stockService.createProductDetailed(productData);
+      
+      if (result.success) {
         setSubmitSuccess("Product added successfully!");
         setForm({
           name: "",
@@ -231,11 +189,11 @@ export default function StockCountPage() {
         });
         setShowModal(false);
       } else {
-        const data = await res.json();
-        setSubmitError(data.error || "Failed to add product.");
+        setSubmitError(result.error || "Failed to add product");
       }
-    } catch {
-      setSubmitError("Failed to add product.");
+    } catch (error) {
+      console.error('Error adding product:', error);
+      setSubmitError("Failed to add product");
     }
   };
 
@@ -572,36 +530,35 @@ return (
               e.preventDefault();
               setCategoryError("");
               setCategoryLoading(true);
-              const token = localStorage.getItem("access_token");
+              
               const companyId = localStorage.getItem("company_id");
               if (!companyId) {
                 setCategoryError("No company selected");
                 setCategoryLoading(false);
                 return;
               }
+              
               try {
-                const res = await fetch(`${API_URL}/categories/`, {
-                  method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                  },
-                  body: JSON.stringify({
-                    name: categoryForm.name,
-                    company: Number(companyId),
-                  }),
-                });
-                if (res.ok) {
-                  const newCat = await res.json();
+                // Create category using ICP service
+                const result = await categoryService.createCategory(
+                  categoryForm.name,
+                  `Category for company ${companyId}`
+                );
+                
+                if (result.success && result.data) {
+                  const newCat = {
+                    category_id: result.data.id,
+                    name: result.data.name
+                  };
                   setCategories((prev) => [...prev, newCat]);
                   setShowCategoryModal(false);
                   setCategoryForm({ name: "" });
                 } else {
-                  const data = await res.json();
-                  setCategoryError(data.error || "Failed to add category.");
+                  setCategoryError(result.error || "Failed to add category");
                 }
-              } catch {
-                setCategoryError("Failed to add category.");
+              } catch (error) {
+                console.error('Error creating category:', error);
+                setCategoryError("Failed to add category");
               } finally {
                 setCategoryLoading(false);
               }

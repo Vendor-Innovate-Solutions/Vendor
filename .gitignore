@@ -1,5 +1,22 @@
 # Root level gitignore for Vendor project
 
+# DFX and ICP specific
+.dfx/
+canister_ids.json
+.vessel/
+.cycles-wallet.json
+wallet.json
+
+# Dependencies
+node_modules/
+target/
+
+# Build outputs
+dist/
+out/
+.next/
+frontend/out/
+
 # IDE and Editor files
 .vscode/
 .idea/
@@ -45,9 +62,6 @@ temp/
 # Documentation build outputs
 docs/_build/
 docs/site/
-
-# Project specific
-# Add any project-specific files here
 
 # Docker
 .dockerignore

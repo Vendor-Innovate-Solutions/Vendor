@@ -99,11 +99,12 @@ const SignUpPage = () => {
   };
 
   return (
-    <div className={cn("flex flex-col gap-6 items-center justify-center min-h-screen bg-black")}>
-      <Card className="bg-gray-900 text-white border border-gray-700 w-full md:w-96">
+    <div className="flex min-h-screen w-full items-center justify-center p-6 md:p-10">
+      <div className="w-full max-w-sm">
+        <Card className="w-full md:w-96">
         <CardHeader className="pb-2">
           <CardTitle className="text-2xl font-bold">Sign Up</CardTitle>
-          <CardDescription className="text-gray-400 border-b border-gray-600 pb-2">
+          <CardDescription className="border-b pb-2">
             Create a new account by filling in the details below
           </CardDescription>
         </CardHeader>
@@ -118,7 +119,7 @@ const SignUpPage = () => {
                   type="text"
                   placeholder="Create a username"
                   required
-                  className="bg-gray-900 text-white border border-gray-700"
+                  className=""
                   name="username"
                   value={formData.username}
                   onChange={handleInputChange}
@@ -131,7 +132,7 @@ const SignUpPage = () => {
                   type="email"
                   placeholder="Enter your email"
                   required
-                  className="bg-gray-900 text-white border border-gray-700"
+                  className=""
                   name="email"
                   value={formData.email}
                   onChange={handleInputChange}
@@ -144,7 +145,7 @@ const SignUpPage = () => {
                   type="password"
                   placeholder="Create your password"
                   required
-                  className="bg-gray-900 text-white border border-gray-700"
+                  className=""
                   name="password"
                   value={formData.password}
                   onChange={handleInputChange}
@@ -157,7 +158,7 @@ const SignUpPage = () => {
                   type="password"
                   placeholder="Confirm your password"
                   required
-                  className="bg-gray-900 text-white border border-gray-700"
+                  className=""
                   name="confirmPassword"
                   value={formData.confirmPassword}
                   onChange={handleInputChange}
@@ -169,7 +170,7 @@ const SignUpPage = () => {
                   id="group_name"
                   name="group_name"
                   required
-                  className="bg-gray-900 text-white border border-gray-700"
+                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-base shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
                   value={formData.group_name}
                   onChange={handleInputChange}
                 >
@@ -185,7 +186,7 @@ const SignUpPage = () => {
               {message && <p className="text-green-500 text-sm">{message}</p>}
               <Button
                 type="submit"
-                className="w-full bg-blue-600 hover:bg-blue-700"
+                className="w-full"
                 disabled={isLoading}
               >
                 {isLoading ? "Signing up..." : "Sign Up"}
@@ -195,7 +196,7 @@ const SignUpPage = () => {
               Already have an account?{" "}
               <Link
                 href="/authentication"
-                className="text-blue-400 underline underline-offset-4"
+                className="underline underline-offset-4"
               >
                 Login
               </Link>
@@ -203,6 +204,7 @@ const SignUpPage = () => {
           </form>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 };

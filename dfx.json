@@ -4,7 +4,14 @@
   "canisters": {
     "vendor_backend": {
       "type": "motoko",
-      "main": "main.mo"
+      "main": "backend/main.mo"
+    },
+    "vendor_frontend": {
+      "type": "assets",
+      "source": [
+        "frontend/out/"
+      ],
+      "dependencies": ["vendor_backend"]
     }
   },
   "defaults": {
@@ -16,7 +23,10 @@
   "networks": {
     "local": {
       "bind": "127.0.0.1:4943",
-      "type": "ephemeral"
+      "type": "ephemeral",
+      "replica": {
+        "subnet_type": "application"
+      }
     },
     "ic": {
       "providers": [
@@ -24,5 +34,6 @@
       ],
       "type": "persistent"
     }
-  }
+  },
+  "output_env_file": ".env"
 }
